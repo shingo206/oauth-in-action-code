@@ -39,7 +39,7 @@ const rsaKey = {
     "kid": "authserver"
 };
 
-const getAccessToken = function (req, res, next) {
+const getAccessToken = (req, res, next) => {
     // check the auth header first
     const auth = req.headers['authorization'];
     let inToken = null;
@@ -92,7 +92,7 @@ const getAccessToken = function (req, res, next) {
 
 };
 
-const requireAccessToken = function (req, res, next) {
+const requireAccessToken = (req, res, next) => {
     if (req.access_token) {
         next();
     } else {
