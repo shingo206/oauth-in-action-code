@@ -47,7 +47,7 @@ const authServer = {
 };
 
 
-const getAccessToken = function (req, res, next) {
+const getAccessToken = (req, res, next) => {
     // check the auth header first
     const auth = req.headers['authorization'];
     let inToken = null;
@@ -61,9 +61,9 @@ const getAccessToken = function (req, res, next) {
     }
 
     console.log('Incoming token: %s', inToken);
-    nosql.one().make(function (builder) {
+    nosql.one().make(builder => {
         builder.where('access_token', inToken);
-        builder.callback(function (err, token) {
+        builder.callback((err, token) => {
             if (token) {
                 console.log("We found a matching token: %s", inToken);
             } else {
@@ -76,7 +76,7 @@ const getAccessToken = function (req, res, next) {
     });
 };
 
-const requireAccessToken = function (req, res, next) {
+const requireAccessToken = (req, res, next) => {
     if (req.access_token) {
         next();
     } else {
@@ -86,32 +86,35 @@ const requireAccessToken = function (req, res, next) {
 
 app.get("/helloWorld", getAccessToken, (req, res) => {
     if (req.access_token) {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('X-XSS-Protection', '1; mode=block');
         let resource = {"greeting": ""};
         switch (req.query.language) {
             case "en":
-                resource.greeting='Hello World';
+                resource.greeting = 'Hello World';
                 break;
             case "de":
-                res.send('Hallo Welt');
+                resource.greeting = 'Hallo Welt';
                 break;
             case "it":
-                res.send('Ciao Mondo');
+                resource.greeting = 'Ciao Mondo';
                 break;
             case "fr":
-                res.send('Bonjour monde');
+                resource.greeting = 'Bonjour monde';
                 break;
             case "es":
-                res.send('Hola mundo');
+                resource.greeting = 'Hola mundo';
                 break;
             default:
-                res.send("Error, invalid language: " + querystring.escape(req.query.language));
+                resource.greeting = 'Error, invalid language: ' + req.query.language;
                 break;
         }
+        res.json(resource);
     }
 
 });
 
-const server = app.listen(9002, 'localhost', function () {
+const server = app.listen(9002, 'localhost', () => {
     const host = server.address().address;
     const port = server.address().port;
 

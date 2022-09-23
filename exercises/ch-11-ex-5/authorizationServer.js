@@ -77,7 +77,7 @@ app.get("/authorize", (req, res) => {
 
 });
 
-app.post('/approve', function (req, res) {
+app.post('/approve', (req, res) => {
 
     const reqid = req.body.reqid;
     const query = requests[reqid];
@@ -208,13 +208,13 @@ app.post("/token", (req, res) => {
                 return;
             }
         case 'refresh_token':
-            nosql.one().make(function (builder) {
+            nosql.one().make(builder => {
                 builder.where('refresh_token', req.body.refresh_token);
-                builder.callback(function (err, token) {
+                builder.callback((err, token) => {
                     if (token) {
                         console.log("We found a matching refresh token: %s", req.body.refresh_token);
                         if (token.client_id !== clientId) {
-                            nosql.remove().make(function (builder) {
+                            nosql.remove().make(builder => {
                                 builder.where('refresh_token', req.body.refresh_token);
                             });
                             res.status(400).json({error: 'invalid_grant'});
@@ -250,16 +250,21 @@ app.post("/token", (req, res) => {
 app.post('/revoke', (req, res) => {
     const auth = req.headers['authorization'];
     let clientId = null, clientSecret = null;
+
     if (auth) {
         const clientCredentials = decodeClientCredentials(auth);
         clientId = clientCredentials.id;
         clientSecret = clientCredentials.secret;
     }
+
     if (req.body.client_id) {
         if (clientId) {
+            // if we've already seen the client's credentials in the authorization header, this is an error
+            console.log('Client attempted to authenticate with multiple methods')
             res.status(401).json({error: 'invalid_client'});
             return;
         }
+
         clientId = req.body.client_id;
         clientSecret = req.body.client_secret;
     }
@@ -271,10 +276,18 @@ app.post('/revoke', (req, res) => {
     }
     if (client.client_secret !== clientSecret) {
         res.status(401).json({error: 'invalid_client'});
-        return;
     }
 
-
+    const inToken = req.body.token;
+    nosql.remove().make(builder => {
+        builder.and();
+        builder.where('access_token', inToken);
+        builder.where('client_id', clientId);
+        builder.callback((err, count) => {
+            console.log('Removed %s tokens', count);
+            res.status(204).end();
+        });
+    });
 });
 
 const buildUrl = (base, options, hash) => {
@@ -283,7 +296,7 @@ const buildUrl = (base, options, hash) => {
     if (!newUrl.query) {
         newUrl.query = {};
     }
-    __.each(options, function (value, key, list) {
+    __.each(options, (value, key) => {
         newUrl.query[key] = value;
     });
     if (hash) {
@@ -301,16 +314,14 @@ const decodeClientCredentials = auth => {
 };
 
 const getScopesFromForm = body => __.filter(__.keys(body), s => __.string.startsWith(s, 'scope_'))
-    .map(function (s) {
-        return s.slice('scope_'.length);
-    });
+    .map(s => s.slice('scope_'.length));
 
 app.use('/', express.static('files/authorizationServer'));
 
 // clear the database
 nosql.clear();
 
-const server = app.listen(9001, 'localhost', function () {
+const server = app.listen(9001, 'localhost', () => {
     const host = server.address().address;
     const port = server.address().port;
 
