@@ -41,7 +41,7 @@ var getAccessToken = function(req, res, next) {
 	} else if (req.query && req.query.access_token) {
 		inToken = req.query.access_token
 	}
-	
+
 	console.log('Incoming token: %s', inToken);
 	nosql.one().make(function(builder) {
 	  builder.where('access_token', inToken);
@@ -56,7 +56,7 @@ var getAccessToken = function(req, res, next) {
 	    return;
 	  });
 	});
-	
+
 };
 
 var requireAccessToken = function(req, res, next) {
@@ -76,14 +76,52 @@ app.post("/resource", cors(), getAccessToken, function(req, res){
 	} else {
 		res.status(401).end();
 	}
-	
+
 });
 
-var userInfoEndpoint = function(req, res) {
-	
-	/*
-	 * Implement the UserInfo Endpoint
-	 */
+const userInfoEndpoint = (req, res) => {
+
+	if (!__.contains(req.access_token.scope, 'openid')) {
+		res.status(403).end();
+		return;
+	}
+
+	const user = req.access_token.user;
+	if (!user) {
+		res.status(404).end();
+		return;
+	}
+
+	const out = {};
+	__.each(req.access_token.scope, scope => {
+		const user_info_out = options => {
+			__.each(options, claim => {
+				if (user[claim]) {
+					out[claim] = user[claim];
+				}
+			});
+		};
+
+		switch (scope) {
+			case 'openid':
+				user_info_out(['sub']);
+				break;
+			case 'profile':
+				user_info_out(['name', 'family_name', 'given_name', 'middle_name', 'nickname', 'preferred_username', 'profile', 'picture', 'website', 'gender', 'birthdate', 'zoneinfo', 'locale', 'updated_at']);
+				break;
+			case 'email':
+				user_info_out(['email', 'email_verified']);
+				break;
+			case 'address':
+				user_info_out(['address']);
+				break;
+			case 'phone':
+				user_info_out(['phone_number', 'phone_number_verified']);
+				break;
+		}
+	});
+
+	res.status(200).json(out);
 
 };
 
@@ -91,9 +129,9 @@ app.get('/userinfo', getAccessToken, requireAccessToken, userInfoEndpoint);
 app.post('/userinfo', getAccessToken, requireAccessToken, userInfoEndpoint);
 
 
-var server = app.listen(9002, 'localhost', function () {
-  var host = server.address().address;
-  var port = server.address().port;
+const server = app.listen(9002, 'localhost', () => {
+  const host = server.address().address;
+  const port = server.address().port;
 
   console.log('OAuth Resource Server is listening at http://%s:%s', host, port);
 });

@@ -205,9 +205,24 @@ app.get('/fetch_resource', (req, res) => {
 
 app.get('/userinfo', (req, res) => {
 
-    /*
-     * Call the UserInfo endpoint and store/display the results
-     */
+    const headers = {
+        'Authorization': 'Bearer ' + access_token
+    };
+
+    const resource = request('GET', authServer.userInfoEndpoint,
+        {headers: headers}
+    );
+
+    if (resource.statusCode >= 200 && resource.statusCode < 300) {
+        const body = JSON.parse(resource.getBody());
+        console.log('Got data: ', body);
+
+        userInfo = body;
+
+        res.render('userinfo', {userInfo: body, id_token: id_token});
+    } else {
+        res.render('error', {error: 'Unable to fetch user information'});
+    }
 
 });
 
@@ -219,9 +234,7 @@ const buildUrl = (base, options, hash) => {
     if (!newUrl.query) {
         newUrl.query = {};
     }
-    __.each(options, (value, key, list) => {
-        newUrl.query[key] = value;
-    });
+    __.each(options, (value, key) => newUrl.query[key] = value);
     if (hash) {
         newUrl.hash = hash;
     }
