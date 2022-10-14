@@ -141,7 +141,7 @@ app.get('/fetch_resource', (req, res) => {
     payload.at = access_token;
     payload.ts = Math.floor(Date.now() / 1000);
     payload.m = 'POST';
-    payload.u = 'http://localhost:9002';
+    payload.u = 'localhost:9002';
     payload.p = '/resource';
 
     const privateKey = jose.KEYUTIL.getKey(key);
